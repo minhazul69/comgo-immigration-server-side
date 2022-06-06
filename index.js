@@ -12,7 +12,7 @@ app.get("/", (req, res) => {
   res.send("Welcome Comgo Immigration server");
 });
 
-const uri = `mongodb+srv://${process.env.DB_NAME}:${process.env.DB_PASS}@cluster0.8gmwt.mongodb.net/?retryWrites=true&w=majority`;
+const uri = `mongodb+srv://comgo-immigration:${process.env.DB_PASS}@cluster0.8gmwt.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -23,6 +23,7 @@ async function run() {
   try {
     await client.connect();
     const visaCollection = client.db("comgo-immigration").collection("visa");
+    const orderCollection = client.db("comgo-immigration").collection("order");
     // GET ALL VISA
     app.get("/visa", async (req, res) => {
       const result = await visaCollection.find().toArray();
@@ -33,6 +34,12 @@ async function run() {
       const id = req.params.id;
       filter = { _id: ObjectId(id) };
       const result = await visaCollection.findOne(filter);
+      res.send(result);
+    });
+    // POST ORDER DATA
+    app.post("/order", async (req, res) => {
+      const order = req.body;
+      const result = await orderCollection.insertOne(order);
       res.send(result);
     });
   } finally {
