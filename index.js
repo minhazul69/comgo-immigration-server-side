@@ -42,6 +42,17 @@ async function run() {
       const result = await orderCollection.insertOne(order);
       res.send(result);
     });
+    // FIND MY ORDER
+    app.get("/order", async (req, res) => {
+      const email = req.query?.email;
+      const query = { email: email };
+      const order = await orderCollection.find(query).toArray();
+      return res.send(order);
+    });
+    app.get("/allOrder", async (req, res) => {
+      const result = await orderCollection.find().toArray();
+      res.send(result);
+    });
   } finally {
   }
 }
