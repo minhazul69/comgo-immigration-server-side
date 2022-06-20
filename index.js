@@ -47,7 +47,6 @@ async function run() {
       const requesterAccount = await userCollection.findOne({
         email: requester,
       });
-      console.log(req.decoded);
       if (requesterAccount?.role === "admin") {
         next();
       } else {
@@ -68,6 +67,7 @@ async function run() {
     // GET ADMIN
     app.get("/admin/:email", async (req, res) => {
       const email = req.params.email;
+      console.log("check admin email", email);
       const user = await userCollection.findOne({ email: email });
       const isAdmin = user.role === "admin";
       res.send({ admin: isAdmin });
@@ -89,14 +89,20 @@ async function run() {
     //   res.send(result);
     // });
     // MAKE ADMIN
-    app.put("/user/admin/:email", verifyAdmin, async (req, res) => {
+    app.put("/user/admin/:email", verifyJWT, verifyAdmin, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
-      console.log(email, filter);
       const updateDoc = {
         $set: { role: "admin" },
       };
       const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+    // DELETE USER
+    app.delete("/userDelete/:id", verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await userCollection.deleteOne(query);
       res.send(result);
     });
     //   USER ADD ON DATABASE
@@ -143,8 +149,8 @@ async function run() {
       res.send(result);
     });
     // FIND MY ORDER
-    app.get("/order", async (req, res) => {
-      const email = req.query?.email;
+    app.get("/order/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
       const query = { email: email };
       const order = await orderCollection.find(query).toArray();
       return res.send(order);
@@ -154,6 +160,13 @@ async function run() {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const result = await orderCollection.deleteOne(query);
+      res.send(result);
+    });
+    // GET ORDER ON ID
+    app.get("/payment/:id", async (req, res) => {
+      const id = req.params.id;
+      filter = { _id: ObjectId(id) };
+      const result = await orderCollection.findOne(filter);
       res.send(result);
     });
     app.get("/allOrder", async (req, res) => {
