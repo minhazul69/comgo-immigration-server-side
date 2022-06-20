@@ -40,53 +40,59 @@ async function run() {
     const visaCollection = client.db("comgo-immigration").collection("visa");
     const orderCollection = client.db("comgo-immigration").collection("order");
     const userCollection = client.db("comgo-immigration").collection("user");
-    const userProfileCollection = client
-      .db("comgo-immigration")
-      .collection("userProfile");
 
     // VERIFY ADMIN
     const verifyAdmin = async (req, res, next) => {
-      const requester = req.decoded.email;
+      const requester = req.decoded?.email;
       const requesterAccount = await userCollection.findOne({
         email: requester,
       });
-      if (requesterAccount.role === "admin") {
+      console.log(req.decoded);
+      if (requesterAccount?.role === "admin") {
         next();
       } else {
         res.status(403).send({ message: "Forbidden Access" });
       }
     };
-    app.get("/myProfile", async (req, res) => {
-      const email = req.query?.email;
-      // const decodedEmail = req.decoded.email;
-      // if (email === decodedEmail) {
-      const query = { email: email };
-      const myProfile = await userProfileCollection.find(query).toArray();
-      return res.send(myProfile);
-      // } else {
-      //   return res.status(403).send({ message: "Forbidden Access" });
-      // }
-    });
-    // update MY PROFILE
-    app.put("/userProfile/:email", async (req, res) => {
+    // app.get("/myProfile", async (req, res) => {
+    //   const email = req.query?.email;
+    //   // const decodedEmail = req.decoded.email;
+    //   // if (email === decodedEmail) {
+    //   const query = { email: email };
+    //   const myProfile = await userProfileCollection.find(query).toArray();
+    //   return res.send(myProfile);
+    //   // } else {
+    //   //   return res.status(403).send({ message: "Forbidden Access" });
+    //   // }
+    // });
+    // GET ADMIN
+    app.get("/admin/:email", async (req, res) => {
       const email = req.params.email;
-      const filter = { email: email };
-      const user = req.body;
-      const options = { upsert: true };
-      const updateDoc = {
-        $set: user,
-      };
-      const result = await userProfileCollection.updateOne(
-        filter,
-        updateDoc,
-        options
-      );
-      res.send(result);
+      const user = await userCollection.findOne({ email: email });
+      const isAdmin = user.role === "admin";
+      res.send({ admin: isAdmin });
     });
+    // // update MY PROFILE
+    // app.put("/userProfile/:email", async (req, res) => {
+    //   const email = req.params.email;
+    //   const filter = { email: email };
+    //   const user = req.body;
+    //   const options = { upsert: true };
+    //   const updateDoc = {
+    //     $set: user,
+    //   };
+    //   const result = await userProfileCollection.updateOne(
+    //     filter,
+    //     updateDoc,
+    //     options
+    //   );
+    //   res.send(result);
+    // });
     // MAKE ADMIN
     app.put("/user/admin/:email", verifyAdmin, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
+      console.log(email, filter);
       const updateDoc = {
         $set: { role: "admin" },
       };
@@ -107,6 +113,11 @@ async function run() {
         expiresIn: "5h",
       });
       res.send({ result, token });
+    });
+    // FIND ALL USER
+    app.get("/allUser", async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
     });
     //   FIND ALL PRODUCT
     app.get("/products", async (req, res) => {
