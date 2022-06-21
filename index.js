@@ -121,13 +121,8 @@ async function run() {
       res.send({ result, token });
     });
     // FIND ALL USER
-    app.get("/allUser", async (req, res) => {
+    app.get("/allUser", verifyJWT, verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray();
-      res.send(result);
-    });
-    //   FIND ALL PRODUCT
-    app.get("/products", async (req, res) => {
-      const result = await productCollection.find().toArray();
       res.send(result);
     });
     // GET ALL VISA
@@ -143,7 +138,7 @@ async function run() {
       res.send(result);
     });
     // POST ORDER DATA
-    app.post("/order", async (req, res) => {
+    app.post("/order", verifyJWT, async (req, res) => {
       const order = req.body;
       const result = await orderCollection.insertOne(order);
       res.send(result);
@@ -156,20 +151,20 @@ async function run() {
       return res.send(order);
     });
     // DELETE ORDER
-    app.delete("/order/:id", async (req, res) => {
+    app.delete("/order/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const result = await orderCollection.deleteOne(query);
       res.send(result);
     });
     // GET ORDER ON ID
-    app.get("/payment/:id", async (req, res) => {
+    app.get("/payment/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       filter = { _id: ObjectId(id) };
       const result = await orderCollection.findOne(filter);
       res.send(result);
     });
-    app.get("/allOrder", async (req, res) => {
+    app.get("/allOrder", verifyJWT, verifyAdmin, async (req, res) => {
       const result = await orderCollection.find().toArray();
       res.send(result);
     });
