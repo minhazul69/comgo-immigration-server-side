@@ -5,6 +5,7 @@ require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 app.use(cors());
 app.use(express.json());
@@ -40,6 +41,9 @@ async function run() {
     const visaCollection = client.db("comgo-immigration").collection("visa");
     const orderCollection = client.db("comgo-immigration").collection("order");
     const userCollection = client.db("comgo-immigration").collection("user");
+    const paymentCollection = client
+      .db("comgo-immigration")
+      .collection("payment");
 
     // VERIFY ADMIN
     const verifyAdmin = async (req, res, next) => {
@@ -89,6 +93,20 @@ async function run() {
     //   res.send(result);
     // });
     // MAKE ADMIN
+    // CREATE PAYMENT INTENT
+    app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+      const service = req.body;
+      const price = service.price;
+      const amount = price * 100;
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
     app.put("/user/admin/:email", verifyJWT, verifyAdmin, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
@@ -149,6 +167,35 @@ async function run() {
       const query = { email: email };
       const order = await orderCollection.find(query).toArray();
       return res.send(order);
+    });
+    // MY ORDER UPDATE PROCESSING
+    app.patch("/order/:id", verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const payment = req.body;
+      const filter = { _id: ObjectId(id) };
+      const pending = "PROCESSING";
+      const updateDoc = {
+        $set: {
+          status: pending,
+          transactionId: payment.transactionId,
+        },
+      };
+      const result = await paymentCollection.insertOne(payment);
+      const updateBooking = await orderCollection.updateOne(filter, updateDoc);
+      res.send(updateBooking);
+    });
+    // ORDER STATUS UPDATE ACCEPT
+    app.patch("/updateOrder/:id", verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const shipped = "ACCEPT";
+      const updateDoc = {
+        $set: {
+          status: shipped,
+        },
+      };
+      const updateBooking = await orderCollection.updateOne(filter, updateDoc);
+      res.send(updateBooking);
     });
     // DELETE ORDER
     app.delete("/order/:id", verifyJWT, async (req, res) => {
